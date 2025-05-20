@@ -1,0 +1,1823 @@
+# Mastermind Game implementation in MIPS Assembly for MARS
+
+# Enhanced version with ASCII art and improved UI
+
+
+
+.data
+
+# ASCII Art Logo
+
+logo1: .asciiz " __  __   _   ___ _____ ___ ___ __  __ ___ _  _ ___  \n"
+
+logo2: .asciiz "|  \\/  | /_\\ / __|_   _| __| _ \\  \\/  |_ _| \\| |   \\ \n"
+
+logo3: .asciiz "| |\\/| |/ _ \\\\__ \\ | | | _||   / |\\/| || || .` | |) |\n"
+
+logo4: .asciiz "|_|  |_/_/ \\_\\___/ |_| |___|_|_\\_|  |_|___|_|\\_|___/ \n"
+
+
+
+# ASCII Art Win
+
+win_art1: .asciiz " __   __              _    _ _       _  \n"
+
+win_art2: .asciiz " \\ \\ / /__  _   _    | |  | (_)     | | \n"
+
+win_art3: .asciiz "  \\ V / _ \\| | | |   | |  | |_ _ __ | | \n"
+
+win_art4: .asciiz "   | | (_) | |_| |   | |/\\| | | '_ \\| | \n"
+
+win_art5: .asciiz "   |_|\\___/ \\__,_|   \\  /\\  / | | | |_| \n"
+
+win_art6: .asciiz "                      \\/  \\/|_|_| |_(_) \n"
+
+
+
+# ASCII Art Lose
+
+lose_art1: .asciiz "  _____                         ____                 _ \n"
+
+lose_art2: .asciiz " / ____|                       / __ \\               | |\n"
+
+lose_art3: .asciiz "| |  __  __ _ _ __ ___   ___  | |  | |_   _____ _ __| |\n"
+
+lose_art4: .asciiz "| | |_ |/ _` | '_ ` _ \\ / _ \\ | |  | \\ \\ / / _ \\ '__| |\n"
+
+lose_art5: .asciiz "| |__| | (_| | | | | | |  __/ | |__| |\\ V /  __/ |  |_|\n"
+
+lose_art6: .asciiz " \\_____|\\__,_|_| |_| |_|\\___|  \\____/  \\_/ \\___|_|  (_)\n"
+
+
+
+# ASCII Art Trophy
+
+trophy1: .asciiz "       ___________\n"
+
+trophy2: .asciiz "      '._==_==_=_.'\n"
+
+trophy3: .asciiz "      .-\\:      /-.\n"
+
+trophy4: .asciiz "     | (|:.     |) |\n"
+
+trophy5: .asciiz "      '-|:.     |-'\n"
+
+trophy6: .asciiz "        \\::.    /\n"
+
+trophy7: .asciiz "         '::. .'\n"
+
+trophy8: .asciiz "           ) (\n"
+
+trophy9: .asciiz "         _.' '._\n"
+
+trophy10: .asciiz "        `\"\"\"\"\"\"\"`\n"
+
+
+
+# Color visualization
+
+color_r: .asciiz "[R]"
+
+color_g: .asciiz "[G]"
+
+color_b: .asciiz "[B]"
+
+color_y: .asciiz "[Y]"
+
+color_p: .asciiz "[P]"
+
+color_c: .asciiz "[C]"
+
+color_unknown: .asciiz "[?]"
+
+
+
+# Formatting text
+
+line:               .asciiz "\n====================================================="
+
+thin_line:          .asciiz "\n-----------------------------------------------------"
+
+# Prompt messages
+
+prompt_codemaker:    .asciiz "\n>> Codemaker's name:  "
+
+prompt_codebreaker:  .asciiz "\n>> Codebreaker's name: "
+
+prompt_guesses:      .asciiz "\n>> Maximum guesses allowed: "
+
+prompt_code:         .asciiz "\n>> Enter a code: "
+
+# Input buffers
+
+name_codemaker:      .space 128
+
+name_codebreaker:    .space 128
+
+Maximum_guesses:     .word 0
+
+secret_code:         .space 4
+
+query_code:          .space 4
+
+# Arrays for tracking matched positions
+
+secret_matched:      .space 4  # Track which positions in secret_code have been matched
+
+query_matched:       .space 4  # Track which positions in query_code have been matched
+
+# Output messages
+
+code_makeris:        .asciiz "\n>> Codemaker is "
+
+code_breakeris:      .asciiz "\n>> Codebreaker is "
+
+Maximum_guessesis:   .asciiz "\n>> Maximum number of guesses: "
+
+code_maker_prompt:   .asciiz ", please enter a 4-char secret code. "
+
+code_breaker_prompt: .asciiz ", this is guess #"
+
+position_matched:    .asciiz "\n>> Position matches:  "
+
+colour_matched:      .asciiz ", colour matches:  "
+
+lose:                .asciiz ", you've failed to crack the code!"
+
+win:                 .asciiz ", code cracked successfully!"
+
+congrats_msg:        .asciiz "\n>> Congratulations, you broke the code successfully!\n"
+
+reveal_secret:       .asciiz "\n>> The secret code was: "
+
+position_detail:     .asciiz "\n>> Correct positions: "
+
+color_at_pos:        .asciiz "\n   Color at position "
+
+is_correct:          .asciiz " is correct"
+
+pos_1:               .asciiz "1"
+
+pos_2:               .asciiz "2"
+
+pos_3:               .asciiz "3"
+
+pos_4:               .asciiz "4"
+
+# Color help message
+
+color_help:          .asciiz "\n>> Available colors: r=Red, g=Green, b=Blue, y=Yellow, p=Purple, c=Cyan"
+
+color_guide:         .asciiz "\n>> Color guide: [R]=Red, [G]=Green, [B]=Blue, [Y]=Yellow, [P]=Purple, [C]=Cyan"
+
+# Game information
+
+game_info1:          .asciiz "\n>> HOW TO PLAY: Codemaker creates a secret 4-color code."
+
+game_info2:          .asciiz "\n>> Codebreaker tries to guess the code within the allowed number of guesses."
+
+game_info3:          .asciiz "\n>> After each guess, you'll see:"
+
+game_info4:          .asciiz "\n>>   - Position matches: Correct color in correct position"
+
+game_info5:          .asciiz "\n>>   - Color matches: Correct color but wrong position"
+
+# Error messages
+
+err1:                .asciiz "\n>> ERROR: Wrong Code! possible colours: r,g,b,y,p,c"
+
+guess_counter:       .asciiz "\n>> Guesses remaining: "
+
+enter_to_continue:   .asciiz "\n>> Press Enter to continue..."
+
+your_guess_msg:      .asciiz "\n>> Your guess: "
+
+buffer:              .space 4
+
+
+
+.text
+
+.globl main
+
+
+
+main:
+
+    # Display ASCII Logo
+
+    jal display_logo
+
+    
+
+    # Print game info
+
+    li $v0, 4
+
+    la $a0, game_info1
+
+    syscall
+
+    li $v0, 4
+
+    la $a0, game_info2
+
+    syscall
+
+    li $v0, 4
+
+    la $a0, game_info3
+
+    syscall
+
+    li $v0, 4
+
+    la $a0, game_info4
+
+    syscall
+
+    li $v0, 4
+
+    la $a0, game_info5
+
+    syscall
+
+    
+
+    # Prompting the user
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, line
+
+    syscall
+
+    
+
+    # Prompt codemaker
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, prompt_codemaker
+
+    syscall
+
+    
+
+    li $v0, 8                  # Read string syscall
+
+    la $a0, name_codemaker
+
+    li $a1, 128                # Max length
+
+    syscall
+
+    
+
+    # Remove newline from codemaker's name
+
+    jal remove_newline_from_name_codemaker
+
+    
+
+    # Prompt codebreaker
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, prompt_codebreaker
+
+    syscall
+
+    
+
+    li $v0, 8                  # Read string syscall
+
+    la $a0, name_codebreaker
+
+    li $a1, 128                # Max length
+
+    syscall
+
+    
+
+    # Remove newline from codebreaker's name
+
+    jal remove_newline_from_name_codebreaker
+
+    
+
+    # Prompt maximum guesses
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, prompt_guesses
+
+    syscall
+
+    
+
+    li $v0, 5                  # Read integer syscall
+
+    syscall
+
+    sw $v0, Maximum_guesses    # Store input in Maximum_guesses
+
+    
+
+    # Printing the names
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, line
+
+    syscall
+
+    
+
+    # Code maker
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, code_makeris
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, name_codemaker
+
+    syscall
+
+    
+
+    # Code breaker
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, code_breakeris
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, name_codebreaker
+
+    syscall
+
+    
+
+    # Maximum guesses
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, Maximum_guessesis
+
+    syscall
+
+    
+
+    li $v0, 1                  # Print integer syscall
+
+    lw $a0, Maximum_guesses
+
+    syscall
+
+    
+
+    # Show color help message
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, color_help
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, color_guide
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, line
+
+    syscall
+
+    
+
+    # Getting code from code maker
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, name_codemaker
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, code_maker_prompt
+
+    syscall
+
+    
+
+    la $a0, secret_code        # Pass address of secret_code buffer
+
+    jal get_code
+
+    
+
+    # Clear the screen for codebreaker
+
+    jal clear_screen
+
+    
+
+    # Display ASCII Logo again
+
+    jal display_logo
+
+    
+
+    lw $t4, Maximum_guesses    # $t4 will hold maximum guesses (equivalent to R12)
+
+    
+
+# Loop and ask code breaker to guess the game until they win or run out of guesses
+
+guess_loop:
+
+    beq $t4, $zero, print_lose # If guesses left = 0, go to print_lose
+
+    
+
+    # Print the first line for information
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, line
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, name_codebreaker
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, code_breaker_prompt
+
+    syscall
+
+    
+
+    # Calculate which guess number this is
+
+    lw $t0, Maximum_guesses
+
+    sub $t1, $t0, $t4
+
+    addi $t1, $t1, 1
+
+    
+
+    li $v0, 1                  # Print integer syscall
+
+    move $a0, $t1
+
+    syscall
+
+    
+
+    # Show remaining guesses
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, guess_counter
+
+    syscall
+
+    
+
+    li $v0, 1                  # Print integer syscall
+
+    move $a0, $t4
+
+    syscall
+
+    
+
+    la $a0, query_code         # Pass address of query_code buffer
+
+    jal get_code
+
+    
+
+    # Clear secret_matched and query_matched arrays before comparison
+
+    la $t0, secret_matched
+
+    sb $zero, 0($t0)
+
+    sb $zero, 1($t0)
+
+    sb $zero, 2($t0)
+
+    sb $zero, 3($t0)
+
+    
+
+    la $t0, query_matched
+
+    sb $zero, 0($t0)
+
+    sb $zero, 1($t0)
+
+    sb $zero, 2($t0)
+
+    sb $zero, 3($t0)
+
+    
+
+    la $t1, query_code         # $t1 = query_code
+
+    la $t2, secret_code        # $t2 = secret_code
+
+    jal comparecodes
+
+    
+
+    # Save position and color matches
+
+    move $t7, $v0              # Save position matches in $t7
+
+    move $t8, $v1              # Save color matches in $t8
+
+    
+
+    # Printing the results
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, thin_line
+
+    syscall
+
+    
+
+    # Display the query code in a visual way
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, your_guess_msg
+
+    syscall
+
+    
+
+    jal display_code_visual
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, position_matched
+
+    syscall
+
+    
+
+    li $v0, 1                  # Print integer syscall
+
+    move $a0, $t7              # Position matches
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, colour_matched
+
+    syscall
+
+    
+
+    li $v0, 1                  # Print integer syscall
+
+    move $a0, $t8              # Color matches
+
+    syscall
+
+    
+
+    # If there are position matches, show details
+
+    beqz $t7, skip_position_details  # Skip if no position matches
+
+    
+
+    # Print position details header
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, position_detail
+
+    syscall
+
+    
+
+    # Check each position for matches
+
+    li $t5, 0                  # Position counter
+
+    
+
+check_position_loop:
+
+    la $t0, secret_code        # Load address of secret_code
+
+    add $t0, $t0, $t5          # Add position offset
+
+    lb $t8, 0($t0)             # Load secret character
+
+    
+
+    la $t0, query_code         # Load address of query_code
+
+    add $t0, $t0, $t5          # Add position offset
+
+    lb $t9, 0($t0)             # Load query character
+
+    
+
+    bne $t8, $t9, next_position_check  # If not matching, skip
+
+    
+
+    # This position has matching colors, print detail
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, color_at_pos
+
+    syscall
+
+    
+
+    # Print position number (1-based)
+
+    addi $t0, $t5, 1           # Convert to 1-based position
+
+    li $v0, 1                  # Print integer syscall
+
+    move $a0, $t0
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, is_correct
+
+    syscall
+
+    
+
+next_position_check:
+
+    addi $t5, $t5, 1           # Increment position counter
+
+    li $t0, 4
+
+    blt $t5, $t0, check_position_loop
+
+    
+
+skip_position_details:
+
+    # If position matches = 4 => all positions match
+
+    li $t0, 4
+
+    beq $t7, $t0, print_win
+
+    
+
+    addi $t4, $t4, -1          # Decrement the guesses
+
+    j guess_loop
+
+    
+
+# Modification for the print_win section
+
+print_win:
+
+    # Display win ASCII art
+
+    jal display_win_art
+
+    
+
+    # Display trophy
+
+    jal display_trophy
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, name_codebreaker
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, win
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, congrats_msg
+
+    syscall
+
+    
+
+    # No need to display the secret code since the player already guessed it correctly
+
+    
+
+    li $v0, 10                 # Exit syscall
+
+    syscall
+
+    
+
+print_lose:
+
+    # Display lose ASCII art
+
+    jal display_lose_art
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, name_codebreaker
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, lose
+
+    syscall
+
+    
+
+    # Print the secret code reveal message
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, reveal_secret
+
+    syscall
+
+    
+
+    # Set up to display the secret code visually
+
+    move $s0, $t1
+
+    la $t1, secret_code
+
+    
+
+    # Call display_code_visual
+
+    jal display_code_visual
+
+    
+
+    # Restore value
+
+    move $t1, $s0
+
+    
+
+    # Print newline
+
+    li $v0, 11                 # Print character syscall
+
+    li $a0, 10                 # Newline character '\n'
+
+    syscall
+
+    
+
+    li $v0, 10                 # Exit syscall
+
+    syscall
+
+
+
+# Display the code visually using color blocks
+
+display_code_visual:
+
+    li $t3, 0                  # Counter
+
+    
+
+display_loop:
+
+    add $t2, $t1, $t3          # Address of current character
+
+    lb $t0, 0($t2)             # Load character
+
+    
+
+    # Check which color to display
+
+    li $t5, 'r'
+
+    beq $t0, $t5, display_red
+
+    
+
+    li $t5, 'g'
+
+    beq $t0, $t5, display_green
+
+    
+
+    li $t5, 'b'
+
+    beq $t0, $t5, display_blue
+
+    
+
+    li $t5, 'y'
+
+    beq $t0, $t5, display_yellow
+
+    
+
+    li $t5, 'p'
+
+    beq $t0, $t5, display_purple
+
+    
+
+    li $t5, 'c'
+
+    beq $t0, $t5, display_cyan
+
+    
+
+    # If unknown, display placeholder
+
+    li $v0, 4
+
+    la $a0, color_unknown
+
+    syscall
+
+    j continue_display
+
+    
+
+display_red:
+
+    li $v0, 4
+
+    la $a0, color_r
+
+    syscall
+
+    j continue_display
+
+    
+
+display_green:
+
+    li $v0, 4
+
+    la $a0, color_g
+
+    syscall
+
+    j continue_display
+
+    
+
+display_blue:
+
+    li $v0, 4
+
+    la $a0, color_b
+
+    syscall
+
+    j continue_display
+
+    
+
+display_yellow:
+
+    li $v0, 4
+
+    la $a0, color_y
+
+    syscall
+
+    j continue_display
+
+    
+
+display_purple:
+
+    li $v0, 4
+
+    la $a0, color_p
+
+    syscall
+
+    j continue_display
+
+    
+
+display_cyan:
+
+    li $v0, 4
+
+    la $a0, color_c
+
+    syscall
+
+    j continue_display
+
+    
+
+continue_display:
+
+    addi $t3, $t3, 1           # Increment counter
+
+    li $t5, 4
+
+    blt $t3, $t5, display_loop
+
+    
+
+    jr $ra                     # Return
+
+
+
+# Display win ASCII art
+
+display_win_art:
+
+    li $v0, 4
+
+    la $a0, line
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, win_art1
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, win_art2
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, win_art3
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, win_art4
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, win_art5
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, win_art6
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, line
+
+    syscall
+
+    
+
+    jr $ra
+
+
+
+# Display lose ASCII art
+
+display_lose_art:
+
+    li $v0, 4
+
+    la $a0, line
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, lose_art1
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, lose_art2
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, lose_art3
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, lose_art4
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, lose_art5
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, lose_art6
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, line
+
+    syscall
+
+    
+
+    jr $ra
+
+
+
+# Display logo ASCII art
+
+display_logo:
+
+    li $v0, 4
+
+    la $a0, logo1
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, logo2
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, logo3
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, logo4
+
+    syscall
+
+    
+
+    jr $ra
+
+
+
+# Display trophy ASCII art
+
+display_trophy:
+
+    li $v0, 4
+
+    la $a0, trophy1
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy2
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy3
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy4
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy5
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy6
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy7
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy8
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy9
+
+    syscall
+
+    
+
+    li $v0, 4
+
+    la $a0, trophy10
+
+    syscall
+
+    
+
+    jr $ra
+
+
+
+# Clear the screen by printing many newlines
+
+clear_screen:
+
+    li $t0, 0              # Counter
+
+    li $t1, 50             # Number of newlines to print
+
+    
+
+clear_loop:
+
+    li $v0, 11             # Print character syscall
+
+    li $a0, 10             # Newline character '\n'
+
+    syscall
+
+    
+
+    addi $t0, $t0, 1       # Increment counter
+
+    blt $t0, $t1, clear_loop
+
+    
+
+    jr $ra
+
+
+
+# Remove newline from codemaker's name
+
+remove_newline_from_name_codemaker:
+
+    la $t0, name_codemaker # Address of codemaker's name
+
+    li $t1, 0              # Counter
+
+    
+
+remove_nl_loop1:
+
+    add $t2, $t0, $t1      # Address of name_codemaker[i]
+
+    lb $t3, 0($t2)         # Load character
+
+    
+
+    # Check for newline or null terminator
+
+    beq $t3, 10, replace_nl_1 # Newline
+
+    beq $t3, 13, replace_nl_1 # Carriage return
+
+    beq $t3, 0, exit_nl_1     # Null terminator
+
+    
+
+    addi $t1, $t1, 1       # Increment counter
+
+    j remove_nl_loop1
+
+    
+
+replace_nl_1:
+
+    sb $zero, 0($t2)       # Replace with null terminator
+
+    
+
+exit_nl_1:
+
+    jr $ra
+
+
+
+# Remove newline from codebreaker's name
+
+remove_newline_from_name_codebreaker:
+
+    la $t0, name_codebreaker # Address of codebreaker's name
+
+    li $t1, 0                # Counter
+
+    
+
+remove_nl_loop2:
+
+    add $t2, $t0, $t1        # Address of name_codebreaker[i]
+
+    lb $t3, 0($t2)           # Load character
+
+    
+
+    # Check for newline or null terminator
+
+    beq $t3, 10, replace_nl_2 # Newline
+
+    beq $t3, 13, replace_nl_2 # Carriage return
+
+    beq $t3, 0, exit_nl_2     # Null terminator
+
+    
+
+    addi $t1, $t1, 1         # Increment counter
+
+    j remove_nl_loop2
+
+    
+
+replace_nl_2:
+
+    sb $zero, 0($t2)         # Replace with null terminator
+
+    
+
+exit_nl_2:
+
+    jr $ra
+
+
+
+# Input: $t1 = query_code, $t2 = secret_code
+
+# Output: $v0 = position matches, $v1 = color matches
+
+# Trashes: $t0, $t3, $t5, $t6, $t7, $t8, $t9
+
+comparecodes:
+
+    li $v0, 0                  # Position matches counter
+
+    li $v1, 0                  # Color matches counter
+
+    
+
+    # Initialize tracking arrays to 0 (unmatched)
+
+    la $t3, secret_matched
+
+    li $t0, 0
+
+    sb $t0, 0($t3)
+
+    sb $t0, 1($t3)
+
+    sb $t0, 2($t3)
+
+    sb $t0, 3($t3)
+
+    
+
+    la $t3, query_matched
+
+    sb $t0, 0($t3)
+
+    sb $t0, 1($t3)
+
+    sb $t0, 2($t3)
+
+    sb $t0, 3($t3)
+
+    
+
+    # First pass: find position matches
+
+    li $t5, 0                  # Counter (i)
+
+    
+
+position_match_loop:
+
+    add $t7, $t1, $t5          # Address of query_code[i]
+
+    lb $t8, 0($t7)             # Load query_code[i]
+
+    
+
+    add $t7, $t2, $t5          # Address of secret_code[i]
+
+    lb $t9, 0($t7)             # Load secret_code[i]
+
+    
+
+    bne $t8, $t9, next_position # If not matching positions, go to next
+
+    
+
+    # We have a match at this position
+
+    addi $v0, $v0, 1           # Increment position matches
+
+    
+
+    # Mark positions as matched
+
+    la $t3, secret_matched
+
+    add $t3, $t3, $t5
+
+    li $t0, 1
+
+    sb $t0, 0($t3)             # secret_matched[i] = 1
+
+    
+
+    la $t3, query_matched
+
+    add $t3, $t3, $t5
+
+    sb $t0, 0($t3)             # query_matched[i] = 1
+
+    
+
+next_position:
+
+    addi $t5, $t5, 1           # Increment counter
+
+    li $t0, 4
+
+    blt $t5, $t0, position_match_loop
+
+
+
+    # Second pass: find color matches (but not position matches)
+
+    li $t5, 0                  # Main counter (i)
+
+    
+
+color_match_outer:
+
+    add $t7, $t1, $t5          # Address of query_code[i]
+
+    lb $t8, 0($t7)             # Load query_code[i]
+
+    
+
+    # Skip if this position was already matched
+
+    la $t3, query_matched
+
+    add $t3, $t3, $t5
+
+    lb $t0, 0($t3)
+
+    bne $t0, $zero, skip_i     # If query_matched[i] != 0, skip
+
+    
+
+    li $t6, 0                  # Nested counter (j)
+
+    
+
+color_match_inner:
+
+    add $t7, $t2, $t6          # Address of secret_code[j]
+
+    lb $t9, 0($t7)             # Load secret_code[j]
+
+    
+
+    # Skip if this position was already matched
+
+    la $t3, secret_matched
+
+    add $t3, $t3, $t6
+
+    lb $t0, 0($t3)
+
+    bne $t0, $zero, skip_j     # If secret_matched[j] != 0, skip
+
+    
+
+    # Check if the colors match
+
+    bne $t8, $t9, skip_j       # If colors don't match, skip
+
+    
+
+    # We have a color match
+
+    addi $v1, $v1, 1           # Increment color matches
+
+    
+
+    # Mark this secret position as matched
+
+    la $t3, secret_matched
+
+    add $t3, $t3, $t6
+
+    li $t0, 1
+
+    sb $t0, 0($t3)             # secret_matched[j] = 1
+
+    
+
+    # Mark this query position as matched
+
+    la $t3, query_matched
+
+    add $t3, $t3, $t5
+
+    sb $t0, 0($t3)             # query_matched[i] = 1
+
+    
+
+    j skip_i                   # Move to next i
+
+    
+
+skip_j:
+
+    addi $t6, $t6, 1           # Increment j
+
+    li $t0, 4
+
+    blt $t6, $t0, color_match_inner
+
+    
+
+skip_i:
+
+    addi $t5, $t5, 1           # Increment i
+
+    li $t0, 4
+
+    blt $t5, $t0, color_match_outer
+
+    
+
+    jr $ra                     # Return
+
+
+
+# Input: $a0 = address of buffer to store input
+
+# Output: Fills the buffer with a valid input
+
+# Trashes: $t0, $t1, $t2, $t3
+
+get_code:
+
+    # Save return address
+
+    addi $sp, $sp, -4
+
+    sw $ra, 0($sp)
+
+    
+
+    move $t0, $a0              # Save buffer address
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, prompt_code
+
+    syscall
+
+    
+
+    li $v0, 8                  # Read string syscall
+
+    move $a0, $t0              # Restore buffer address
+
+    li $a1, 10                 # Max length (increased to handle newline)
+
+    syscall
+
+    
+
+    # Process input to ensure we have exactly 4 valid chars
+
+    move $t2, $t0              # Pointer to buffer
+
+    li $t1, 0                  # Counter
+
+    
+
+    # Remove newline character if present
+
+remove_newline:
+
+    add $t3, $t2, $t1          # Address of buffer[i]
+
+    lb $t3, 0($t3)             # Load character
+
+    
+
+    # Check for newline or null terminator
+
+    beq $t3, 10, replace_nl    # Newline
+
+    beq $t3, 13, replace_nl    # Carriage return
+
+    beq $t3, 0, check_length   # Null terminator
+
+    
+
+    addi $t1, $t1, 1           # Increment counter
+
+    j remove_newline
+
+    
+
+replace_nl:
+
+    add $t3, $t2, $t1          # Address of buffer[i]
+
+    sb $zero, 0($t3)           # Replace with null terminator
+
+    
+
+check_length:
+
+    # If we don't have 4 characters, show error
+
+    li $t0, 4
+
+    bne $t1, $t0, input_error
+
+    
+
+    # Validate each character
+
+    li $t1, 0                  # Reset counter
+
+    
+
+loop_validation:
+
+    add $t3, $t2, $t1          # Address of buffer[i]
+
+    lb $t3, 0($t3)             # Load character
+
+    
+
+    # Check for valid colors
+
+    li $t0, 114                # 'r'
+
+    beq $t3, $t0, next_character
+
+    
+
+    li $t0, 103                # 'g'
+
+    beq $t3, $t0, next_character
+
+    
+
+    li $t0, 98                 # 'b'
+
+    beq $t3, $t0, next_character
+
+    
+
+    li $t0, 121                # 'y'
+
+    beq $t3, $t0, next_character
+
+    
+
+    li $t0, 112                # 'p'
+
+    beq $t3, $t0, next_character
+
+    
+
+    li $t0, 99                 # 'c'
+
+    beq $t3, $t0, next_character
+
+    
+
+    # If no branch taken, it's an error
+
+    j input_error
+
+    
+
+next_character:
+
+    addi $t1, $t1, 1           # Increment counter
+
+    li $t0, 4
+
+    blt $t1, $t0, loop_validation
+
+    
+
+    # All characters validated successfully
+
+    lw $ra, 0($sp)
+
+    addi $sp, $sp, 4
+
+    jr $ra
+
+
+
+input_error:
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, line
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, err1
+
+    syscall
+
+    
+
+    li $v0, 4                  # Print string syscall
+
+    la $a0, line
+
+    syscall
+
+    
+
+    # Restore original buffer address
+
+    move $a0, $t2
+
+    
+
+    # Try again
+
+    jal get_code
+
+    
+
+    # Restore return address and return
+
+    lw $ra, 0($sp)
+
+    addi $sp, $sp, 4
+
+    jr $ra
